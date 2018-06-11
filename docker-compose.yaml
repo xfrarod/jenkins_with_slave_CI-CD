@@ -1,0 +1,63 @@
+#version: '3'
+#
+version: '2.1'
+
+services:
+
+  jenkins-master:
+    build:
+      context: ./jenkins-master
+      dockerfile: Dockerfile
+
+    container_name: jenkins-master
+    image: bluecedarnetworks/jenkins-master:2.107.2
+    entrypoint: /usr/local/bin/jenkins.sh --argumentsRealm.passwd.admin=jenkins123! --argumentsRealm.roles.admin=admin
+    ports:
+      - 8080:8080
+      - 50000:50000
+    networks:
+      - jenkins_net
+    environment:
+      JAVA_OPTS: "-Djava.awt.headless=true"
+      ADMIN_PASSWORD: admin
+      ADMIN_USER: Blu3C3dar01!
+    volumes:
+      - ./:/var/jenkins_home 
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:50000", "||", "exit", "1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  jenkins-slave:
+    build:
+      context: ./jenkins-slave
+      dockerfile: Dockerfile
+    container_name: jenkins-slave
+    image: bluecedarnetworks/jenkins-slave:1.0.0
+    stdin_open: true
+    tty: true
+    ports:
+      - "2222:22"
+    depends_on:
+      jenkins-master:
+        condition: service_started
+    networks:
+      - jenkins_net
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#      - /Users/<USER>/.kube:/root/.kube
+    environment:
+      JAVA_OPTS: "-Djava.awt.headless=true"
+      SLAVE_NAME: slave
+      SLAVE_MODE: exclusive
+      SLAVE_DESCRIPTION: Core Jenkins Slave
+      SLAVE_LABELS: docker mvn azure
+      SLAVE_EXECUTORS: 1
+      SWARM_MASTER: http://jenkins-master:8080
+      SWARM_USER: admin
+      SWARM_PASSWORD: Blu3C3dar01!
+
+networks:
+  jenkins_net:
+
