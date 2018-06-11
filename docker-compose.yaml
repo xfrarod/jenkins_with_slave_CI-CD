@@ -20,7 +20,7 @@ services:
     environment:
       JAVA_OPTS: "-Djava.awt.headless=true"
       ADMIN_PASSWORD: admin
-      ADMIN_USER: Blu3C3dar01!
+      ADMIN_USER: pa55w0rd01!
     volumes:
       - ./:/var/jenkins_home 
     healthcheck:
@@ -56,7 +56,7 @@ services:
       SLAVE_EXECUTORS: 1
       SWARM_MASTER: http://jenkins-master:8080
       SWARM_USER: admin
-      SWARM_PASSWORD: Blu3C3dar01!
+      SWARM_PASSWORD: pa55w0rd01!
 
 networks:
   jenkins_net:
