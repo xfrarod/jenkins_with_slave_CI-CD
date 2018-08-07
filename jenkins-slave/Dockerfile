@@ -2,9 +2,9 @@ FROM centos:7
 MAINTAINER "Francisco Rodriguez" <frodriguez@bluecedar.com>
 
 # Java Env Variables
-ENV JAVA_VERSION=1.8.0_172
-ENV JAVA_TARBALL=server-jre-8u172-linux-x64.tar.gz
-ENV JAVA_HOME=/opt/java/jdk${JAVA_VERSION}
+ENV JAVA_VERSION=jdk1.8.0_181
+ENV JAVA_TARBALL=jdk-8u181-linux-x64.tar.gz
+ENV JAVA_HOME=/opt/java/${JAVA_VERSION}
 
 # Swarm Env Variables (defaults)
 ENV SWARM_MASTER=http://jenkins:8080
@@ -39,8 +39,8 @@ RUN pip install awscli==1.10.19
 
 # Docker versions Env Variables
 ENV DOCKER_ENGINE_VERSION=1.10.3-1.el7.centos
-ENV DOCKER_COMPOSE_VERSION=1.6.0
-ENV DOCKER_MACHINE_VERSION=v0.6.0
+ENV DOCKER_COMPOSE_VERSION=1.21.2
+ENV DOCKER_MACHINE_VERSION=v0.14.0
 
 #COPY scripts/get-docker.sh /tmp/.
 #RUN chmod 755 /tmp/get-docker.sh
@@ -54,17 +54,15 @@ RUN curl -L https://github.com/docker/machine/releases/download/${DOCKER_MACHINE
     chmod +x /usr/local/bin/docker-machine
 
 # Install Java
-RUN wget -q --no-check-certificate --directory-prefix=/tmp \
-         --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
-            http://download.oracle.com/otn-pub/java/jdk/8u172-b11/a58eab1ec242421181065cdc37240b08/${JAVA_TARBALL} && \
-          mkdir -p /opt/java && \
-              tar -xzf /tmp/${JAVA_TARBALL} -C /opt/java/ && \
-            alternatives --install /usr/bin/java java /opt/java/jdk${JAVA_VERSION}/bin/java 100 && \
-                rm -rf /tmp/* && rm -rf /var/log/*
+
+RUN  mkdir -p /opt/java
+ADD java/${JAVA_TARBALL} /opt/java/.
+
+RUN alternatives --install /usr/bin/java java /opt/java/${JAVA_VERSION}/bin/java 100 && \
+    rm -rf /var/log/*
 
 # Make Jenkins a slave by installing swarm-client
 RUN curl -s -o /bin/swarm-client.jar -k http://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.12/swarm-client-3.12.jar
-
 
 # Install Maven
 RUN cd /usr/local/src/ && \
@@ -103,11 +101,25 @@ RUN chmod +x /usr/local/bin/kubectl
 RUN helm init --client-only
 
 # Install Gradle
-RUN wget https://services.gradle.org/distributions/gradle-4.7-bin.zip \
+RUN wget https://services.gradle.org/distributions/gradle-4.9-bin.zip \
   && mkdir /opt/gradle \
-  && unzip -d /opt/gradle gradle-4.7-bin.zip \
-  && export PATH=$PATH:/opt/gradle/gradle-4.7/bin \
+  && unzip -d /opt/gradle gradle-4.9-bin.zip \
+  && export PATH=$PATH:/opt/gradle/gradle-4.9/bin \
+  && ln -s /opt/gradle/gradle-4.9/bin/gradle /usr/bin/gradle \
   && gradle -v
 
 # Start Swarm-Client
 CMD java -jar /bin/swarm-client.jar -executors ${SLAVE_EXECUTORS} -description "${SLAVE_DESCRIPTION}" -master ${SWARM_MASTER} -username ${SWARM_USER} -password ${SWARM_PASSWORD} -name "${SLAVE_NAME}" -labels "${SLAVE_LABELS}" -mode ${SLAVE_MODE}
+
+RUN cp /etc/hosts /tmp/hosts
+
+RUN echo "10.42.16.17 stash.corp.bluecedar.com stash" >> /tmp/hosts
+RUN echo "104.16.175.166 services.gradle.org" >> /tmp/hosts
+
+RUN cat /tmp/hosts
+RUN cp /tmp/hosts /etc/hosts
+
+RUN mkdir -p -- /lib-override && cp /lib64/libnss_files.so.2 /lib-override
+RUN sed -i 's:/etc/hosts:/tmp/hosts:g' /lib-override/libnss_files.so.2
+ENV LD_LIBRARY_PATH /lib-override
+

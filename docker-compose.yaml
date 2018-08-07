@@ -10,8 +10,9 @@ services:
       dockerfile: Dockerfile
 
     container_name: jenkins-master
-    image: bluecedarnetworks/jenkins-master:2.107.2
-    entrypoint: /usr/local/bin/jenkins.sh --argumentsRealm.passwd.admin=jenkins123! --argumentsRealm.roles.admin=admin
+    image: xfrarod/jenkins-master:2.107.2
+    #entrypoint: /usr/local/bin/jenkins.sh --argumentsRealm.passwd.admin=jenkins --argumentsRealm.roles.admin=jenkins
+    entrypoint: /usr/local/bin/jenkins.sh
     ports:
       - 8080:8080
       - 50000:50000
@@ -20,9 +21,9 @@ services:
     environment:
       JAVA_OPTS: "-Djava.awt.headless=true"
       ADMIN_PASSWORD: admin
-      ADMIN_USER: pa55w0rd01!
+      ADMIN_USER: admin123!
     volumes:
-      - ./:/var/jenkins_home 
+      - ./jenkins_home:/var/jenkins_home 
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:50000", "||", "exit", "1" ]
       interval: 10s
@@ -34,7 +35,7 @@ services:
       context: ./jenkins-slave
       dockerfile: Dockerfile
     container_name: jenkins-slave
-    image: bluecedarnetworks/jenkins-slave:1.0.0
+    image: xfrarod/jenkins-slave:1.0.0
     stdin_open: true
     tty: true
     ports:
@@ -56,7 +57,7 @@ services:
       SLAVE_EXECUTORS: 1
       SWARM_MASTER: http://jenkins-master:8080
       SWARM_USER: admin
-      SWARM_PASSWORD: pa55w0rd01!
+      SWARM_PASSWORD: admin123!
 
 networks:
   jenkins_net:
